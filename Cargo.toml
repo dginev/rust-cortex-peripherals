@@ -1,0 +1,22 @@
+[package]
+name = "pericortex"
+version = "0.1.0"
+authors = ["Deyan Ginev <d.ginev@jacobs-university.de>"]
+
+[lib]
+name = "pericortex"
+crate-type = ["rlib", "dylib", "staticlib"]
+
+[dependencies.libarchive-sys]
+git = "https://github.com/dginev/libarchive-sys.git"
+
+[dependencies.zmq]
+git = "https://github.com/dginev/rust-zmq.git"
+
+[dependencies]
+libc = "~0.1"
+regex = "0.1.8"
+regex_macros = "0.1.8"
+rustc-serialize = "0.3"
+rand = "*"
+tempfile = "*"
