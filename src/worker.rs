@@ -15,7 +15,7 @@ use std::env;
 use std::fs::File;
 use std::io::{Read,Write, Seek, SeekFrom};
 use std::path::Path;
-// use std::str;
+use std::str;
 use std::process::Command;
 use rand::{random};
 
@@ -50,8 +50,10 @@ pub trait Worker {
       let taskid = taskid_msg.as_str().unwrap();
       
       // Prepare a File for the input
+      println!("--- Create a file ");
       let input_filepath = env::temp_dir().to_str().unwrap().to_string() + "/" + taskid ;
       let mut file = File::create(input_filepath.clone()).unwrap(); 
+      println!("--- Receive content. ");
       loop {
         source.recv(&mut recv_msg, 0).unwrap();
 
@@ -60,9 +62,12 @@ pub trait Worker {
           break;
         }
       }
+      println!("--- Data received at {:?} ", input_filepath);
       
       file.seek(SeekFrom::Start(0)).unwrap();
+      println!("--- Starting worker convert. ");
       let file_opt = self.convert(Path::new(&input_filepath));
+      println!("--- Ending worker convert. ");
       if file_opt.is_some() {
         let mut converted_file = file_opt.unwrap();
         sink.send_str(&self.service(), SNDMORE).unwrap();
@@ -162,7 +167,7 @@ impl Worker for TexToHtmlWorker {
     let name = path.file_stem().unwrap().to_str().unwrap();
     let destination_path = env::temp_dir().to_str().unwrap().to_string() + "/" +name+ ".zip";
 
-    Command::new("latexmlc")
+    let output = Command::new("latexmlc")
       .arg("--whatsin")
       .arg("archive")
       .arg("--whatsout")
@@ -188,8 +193,8 @@ impl Worker for TexToHtmlWorker {
       .output()
       .unwrap_or_else(|e| { panic!("failed to execute process: {}", e) });
     
-    // println!("Dest: {:?}", destination_path);
-    // println!("Log: {:?}", str::from_utf8(&output.stderr));
+    println!("Dest: {:?}", destination_path);
+    println!("Log: {:?}", str::from_utf8(&output.stderr));
     Some(File::open(destination_path.clone()).unwrap())
   }
 }
