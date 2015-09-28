@@ -181,7 +181,7 @@ impl Worker for TexToHtmlWorker {
       .arg("--timeout")
       .arg("300")
       .arg("--log")
-      .arg(name.to_string() + ".log")
+      .arg("cortex.log")
       .arg("--destination")
       .arg(destination_path.clone())
       .arg(path.clone())
