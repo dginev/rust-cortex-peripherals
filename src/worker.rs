@@ -162,7 +162,7 @@ impl Worker for TexToHtmlWorker {
   fn convert(&self, path : &Path) -> Option<File> {
     let name = path.file_stem().unwrap().to_str().unwrap();
     let destination_path = env::temp_dir().to_str().unwrap().to_string() + "/" +name+ ".zip";
-
+    // println!("Source {:?}", path);
     Command::new("latexmlc")
       .arg("--whatsin")
       .arg("archive")
@@ -189,8 +189,11 @@ impl Worker for TexToHtmlWorker {
       .output()
       .unwrap_or_else(|e| { panic!("failed to execute process: {}", e) });
     
-    println!("Dest: {:?}", destination_path);
-    // println!("Log: {:?}", str::from_utf8(&output.stderr));
-    Some(File::open(destination_path.clone()).unwrap())
+    // println!("Dest: {:?}", destination_path);
+    let file_test = File::open(destination_path.clone());
+    match file_test {
+      Ok(file) => Some(file),
+      Err(_) => None
+    }
   }
 }
