@@ -11,6 +11,7 @@ extern crate tempfile;
 use zmq::{Error, Message, Context, SNDMORE};
 use std::ops::Deref;
 use std::thread;
+use std::time::Duration;
 use std::env;
 use std::fs::File;
 use std::io::{Read,Write, Seek, SeekFrom};
@@ -86,7 +87,7 @@ pub trait Worker {
       }
       else {
         // If there was nothing to do, retry a minute later
-        thread::sleep_ms(60000);
+        thread::sleep(Duration::new(60,0));
         continue 
       }
 
@@ -95,7 +96,7 @@ pub trait Worker {
         Some(upper_bound) => {
           if work_counter >= upper_bound {
             // Give enough time to complete the Final job.
-            thread::sleep_ms(500);
+            thread::sleep(Duration::new(1,0));
             break;
           }
         },
@@ -188,7 +189,7 @@ impl Worker for TexToHtmlWorker {
       .output()
       .unwrap_or_else(|e| { panic!("failed to execute process: {}", e) });
     
-    // println!("Dest: {:?}", destination_path);
+    println!("Dest: {:?}", destination_path);
     // println!("Log: {:?}", str::from_utf8(&output.stderr));
     Some(File::open(destination_path.clone()).unwrap())
   }
