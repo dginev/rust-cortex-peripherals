@@ -4,6 +4,9 @@
 // Licensed under the MIT license <LICENSE-MIT or http://opensource.org/licenses/MIT>.
 // This file may not be copied, modified, or distributed
 // except according to those terms.
+
+//! base class automating dispatcher communication via ZMQ 
+
 extern crate zmq;
 extern crate rand;
 extern crate tempfile;
@@ -18,16 +21,20 @@ use std::io::{Read,Write, Seek, SeekFrom};
 use std::path::Path;
 // use std::str;
 use std::process::Command;
-use rand::{random};
 
+/// Generic requirements for CorTeX workers
 pub trait Worker {
-  // fn work(&self, &Message) -> Option<Message>;
+  /// Core processing method
   fn convert(&self, &Path) -> Option<File>;
+  /// Size of chunk for network communication, larger implies less IO, smaller implies less RAM use
   fn message_size(&self) -> usize;
+  /// Name of the service, as registered in CorTeX
   fn service(&self) -> String;
+  /// URL to the CorTeX dispatcher
   fn source(&self) -> String;
+  /// URL to the CorTeX sink
   fn sink(&self) -> String;
-
+  /// main worker loop, works in perpetuity or up to a specified `limit`
   fn start(&self, limit : Option<usize>) -> Result<(), Error> {
     let mut work_counter = 0;
     // Connect to a task ventilator
@@ -106,11 +113,17 @@ pub trait Worker {
     Ok(())
   }
 }
+/// An echo worker for testing
 pub struct EchoWorker {
+  /// the usual 
   pub service : String,
+  /// the usual 
   pub version : f32,
+  /// the usual 
   pub message_size : usize,
+  /// the usual 
   pub source : String,
+  /// the usual 
   pub sink : String
 }
 impl Default for EchoWorker {
@@ -134,12 +147,17 @@ impl Worker for EchoWorker {
     Some(File::open(path).unwrap())
   }
 }
-
+/// A TeX to HTML conversion worker
 pub struct TexToHtmlWorker {
+  /// the usual 
   pub service : String,
+  /// the usual 
   pub version : f32,
+  /// the usual 
   pub message_size : usize,
+  /// the usual 
   pub source : String,
+  /// the usual 
   pub sink : String
 }
 impl Default for TexToHtmlWorker {
