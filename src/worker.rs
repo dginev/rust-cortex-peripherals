@@ -58,7 +58,7 @@ pub trait Worker {
       let taskid = taskid_msg.as_str().unwrap();
 
       // Prepare a File for the input
-      let input_filepath = env::temp_dir().to_str().unwrap().to_string() + "/" + taskid ;
+      let input_filepath = env::temp_dir().to_str().unwrap().to_string() + "/" + taskid + ".zip";
       let mut file = File::create(input_filepath.clone()).unwrap();
       loop {
         source.recv(&mut recv_msg, 0).unwrap();
