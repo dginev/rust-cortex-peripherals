@@ -5,7 +5,7 @@
 // This file may not be copied, modified, or distributed
 // except according to those terms.
 
-//! base class automating dispatcher communication via ZMQ 
+//! base class automating dispatcher communication via ZMQ
 
 extern crate zmq;
 extern crate rand;
@@ -56,10 +56,10 @@ pub trait Worker {
       source.send_str(&self.service(), 0).unwrap();
       source.recv(&mut taskid_msg, 0).unwrap();
       let taskid = taskid_msg.as_str().unwrap();
-      
+
       // Prepare a File for the input
       let input_filepath = env::temp_dir().to_str().unwrap().to_string() + "/" + taskid ;
-      let mut file = File::create(input_filepath.clone()).unwrap(); 
+      let mut file = File::create(input_filepath.clone()).unwrap();
       loop {
         source.recv(&mut recv_msg, 0).unwrap();
 
@@ -68,7 +68,7 @@ pub trait Worker {
           break;
         }
       }
-      
+
       file.seek(SeekFrom::Start(0)).unwrap();
       let file_opt = self.convert(Path::new(&input_filepath));
       if file_opt.is_some() {
@@ -83,7 +83,7 @@ pub trait Worker {
           data.truncate(size);
           if size < message_size {
             // If exhausted, send the last frame
-            sink.send(&data,0).unwrap(); 
+            sink.send(&data,0).unwrap();
             // And terminate
             break;
           } else {
@@ -95,7 +95,7 @@ pub trait Worker {
       else {
         // If there was nothing to do, retry a minute later
         thread::sleep(Duration::new(60,0));
-        continue 
+        continue
       }
 
       work_counter += 1;
@@ -115,15 +115,15 @@ pub trait Worker {
 }
 /// An echo worker for testing
 pub struct EchoWorker {
-  /// the usual 
+  /// the usual
   pub service : String,
-  /// the usual 
+  /// the usual
   pub version : f32,
-  /// the usual 
+  /// the usual
   pub message_size : usize,
-  /// the usual 
+  /// the usual
   pub source : String,
-  /// the usual 
+  /// the usual
   pub sink : String
 }
 impl Default for EchoWorker {
@@ -133,7 +133,7 @@ impl Default for EchoWorker {
       version: 0.1,
       message_size: 100000,
       source: "tcp://localhost:5555".to_string(),
-      sink: "tcp://localhost:5556".to_string()      
+      sink: "tcp://localhost:5556".to_string()
     }
   }
 }
@@ -149,15 +149,15 @@ impl Worker for EchoWorker {
 }
 /// A TeX to HTML conversion worker
 pub struct TexToHtmlWorker {
-  /// the usual 
+  /// the usual
   pub service : String,
-  /// the usual 
+  /// the usual
   pub version : f32,
-  /// the usual 
+  /// the usual
   pub message_size : usize,
-  /// the usual 
+  /// the usual
   pub source : String,
-  /// the usual 
+  /// the usual
   pub sink : String
 }
 impl Default for TexToHtmlWorker {
@@ -167,7 +167,7 @@ impl Default for TexToHtmlWorker {
       version: 0.1,
       message_size: 100000,
       source: "tcp://localhost:5555".to_string(),
-      sink: "tcp://localhost:5556".to_string()      
+      sink: "tcp://localhost:5556".to_string()
     }
   }
 }
@@ -180,7 +180,7 @@ impl Worker for TexToHtmlWorker {
   fn convert(&self, path : &Path) -> Option<File> {
     let name = path.file_stem().unwrap().to_str().unwrap();
     let destination_path = env::temp_dir().to_str().unwrap().to_string() + "/" +name+ ".zip";
-    // println!("Source {:?}", path);
+    println!("Source {:?}", path);
     Command::new("latexmlc")
       .arg("--whatsin")
       .arg("archive")
@@ -190,10 +190,9 @@ impl Worker for TexToHtmlWorker {
       .arg("html5")
       .arg("--pmml")
       .arg("--cmml")
+      .arg("--mathtex")
       .arg("--preload")
       .arg("[ids]latexml.sty")
-      .arg("--css")
-      .arg("http://latexml.mathweb.org/css/external/LaTeXML.css")
       .arg("--nodefaultresources")
       .arg("--inputencoding")
       .arg("iso-8859-1")
@@ -206,8 +205,8 @@ impl Worker for TexToHtmlWorker {
       .arg(path.clone())
       .output()
       .unwrap_or_else(|e| { panic!("failed to execute process: {}", e) });
-    
-    // println!("Dest: {:?}", destination_path);
+
+    println!("Dest: {:?}", destination_path);
     let file_test = File::open(destination_path.clone());
     match file_test {
       Ok(file) => Some(file),
