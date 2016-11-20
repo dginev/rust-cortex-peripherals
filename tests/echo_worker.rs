@@ -10,7 +10,7 @@ fn mock_round_trip() {
   let test_payload = "cortex peripherals - echo worker test".to_string();
   let sink_test_payload = test_payload.clone();
   let vent_thread = thread::spawn(move || {
-    let mut ventilator_context = zmq::Context::new();
+    let ventilator_context = zmq::Context::new();
     let mut ventilator = ventilator_context.socket(zmq::ROUTER).unwrap();
     let ventilator_address = "tcp://*:5555";
     assert!(ventilator.bind(&ventilator_address).is_ok());
@@ -29,7 +29,7 @@ fn mock_round_trip() {
   });
 
   let sink_thread = thread::spawn(move || {
-    let mut sink_context = zmq::Context::new();
+    let sink_context = zmq::Context::new();
     let mut sink = sink_context.socket(zmq::PULL).unwrap();
     let sink_address = "tcp://*:5556";
     assert!(sink.bind(&sink_address).is_ok());
@@ -38,12 +38,12 @@ fn mock_round_trip() {
     sink.recv(&mut service_msg, 0).unwrap();
     let service_name = service_msg.as_str().unwrap();
     assert!(service_name == "echo_service");
-          
+
     let mut taskid_msg = zmq::Message::new().unwrap();
     sink.recv(&mut taskid_msg, 0).unwrap();
     let taskid_str = taskid_msg.as_str().unwrap();
     assert!(taskid_str == "1");
-    
+
     let mut recv_msg = zmq::Message::new().unwrap();
     sink.recv(&mut recv_msg, 0).unwrap();
     let recv_payload = recv_msg.as_str().unwrap();
@@ -52,7 +52,7 @@ fn mock_round_trip() {
 
   // Start up an echo worker
   let worker = EchoWorker::default();
-  // Perform a single echo task 
+  // Perform a single echo task
   assert!(worker.start(Some(1)).is_ok());
 
   assert!(vent_thread.join().is_ok());

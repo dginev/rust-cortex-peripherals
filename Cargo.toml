@@ -14,8 +14,8 @@ git = "https://github.com/dginev/libarchive-sys.git"
 git = "https://github.com/erickt/rust-zmq.git"
 
 [dependencies]
-libc = "~0.1"
-regex = "*"
+libc = "0.2.17"
+regex = "0.1.80"
 rustc-serialize = "0.3"
-rand = "*"
-tempfile = "*"
+rand = "0.3.14"
+tempfile = "2.1.4"
