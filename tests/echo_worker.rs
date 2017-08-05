@@ -16,16 +16,16 @@ fn mock_round_trip() {
     assert!(ventilator.bind(&ventilator_address).is_ok());
 
     // We expect one request
-    let mut msg = zmq::Message::new().unwrap();
-    let mut identity = zmq::Message::new().unwrap();
+    let mut msg = zmq::Message::new();
+    let mut identity = zmq::Message::new();
     ventilator.recv(&mut identity, 0).unwrap();
     ventilator.recv(&mut msg, 0).unwrap();
     let service_name = msg.as_str().unwrap().to_string();
     assert!(service_name == "echo_service");
 
-    ventilator.send_msg(identity, SNDMORE).unwrap();
-    ventilator.send_str("1", SNDMORE).unwrap();
-    ventilator.send_str(&test_payload, 0).unwrap();
+    ventilator.send(identity, SNDMORE).unwrap();
+    ventilator.send("1", SNDMORE).unwrap();
+    ventilator.send(&test_payload, 0).unwrap();
   });
 
   let sink_thread = thread::spawn(move || {
@@ -34,17 +34,17 @@ fn mock_round_trip() {
     let sink_address = "tcp://*:5556";
     assert!(sink.bind(&sink_address).is_ok());
 
-    let mut service_msg = zmq::Message::new().unwrap();
+    let mut service_msg = zmq::Message::new();
     sink.recv(&mut service_msg, 0).unwrap();
     let service_name = service_msg.as_str().unwrap();
     assert!(service_name == "echo_service");
 
-    let mut taskid_msg = zmq::Message::new().unwrap();
+    let mut taskid_msg = zmq::Message::new();
     sink.recv(&mut taskid_msg, 0).unwrap();
     let taskid_str = taskid_msg.as_str().unwrap();
     assert!(taskid_str == "1");
 
-    let mut recv_msg = zmq::Message::new().unwrap();
+    let mut recv_msg = zmq::Message::new();
     sink.recv(&mut recv_msg, 0).unwrap();
     let recv_payload = recv_msg.as_str().unwrap();
     assert!(recv_payload == sink_test_payload);
