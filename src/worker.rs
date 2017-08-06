@@ -50,10 +50,10 @@ pub trait Worker {
     assert!(sink.connect(&self.sink()).is_ok());
     // Work in perpetuity
     loop {
-      let mut taskid_msg = Message::new();
-      let mut recv_msg = Message::new();
+      let mut taskid_msg = Message::new().unwrap();
+      let mut recv_msg = Message::new().unwrap();
 
-      source.send(&self.service(), 0).unwrap();
+      source.send_str(&self.service(), 0).unwrap();
       source.recv(&mut taskid_msg, 0).unwrap();
       let taskid = taskid_msg.as_str().unwrap();
 
@@ -73,8 +73,8 @@ pub trait Worker {
       let file_opt = self.convert(Path::new(&input_filepath));
       if file_opt.is_some() {
         let mut converted_file = file_opt.unwrap();
-        sink.send(&self.service(), SNDMORE).unwrap();
-        sink.send(taskid, SNDMORE).unwrap();
+        sink.send_str(&self.service(), SNDMORE).unwrap();
+        sink.send_str(taskid, SNDMORE).unwrap();
         loop {
           // Stream converted data via zmq
           let message_size = self.message_size();
