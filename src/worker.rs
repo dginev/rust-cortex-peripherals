@@ -7,18 +7,17 @@
 
 //! base class automating dispatcher communication via ZMQ
 
-extern crate zmq;
 extern crate rand;
-extern crate tempfile;
+extern crate zmq;
 
-use zmq::{Error, Message, Context, SNDMORE};
-use std::ops::Deref;
-use std::thread;
-use std::time::Duration;
 use std::env;
 use std::fs::File;
-use std::io::{Read,Write, Seek, SeekFrom};
+use std::io::{Read, Seek, SeekFrom, Write};
+use std::ops::Deref;
 use std::path::Path;
+use std::thread;
+use std::time::Duration;
+use zmq::{Context, Error, Message, SNDMORE};
 // use std::str;
 use std::process::Command;
 
@@ -35,12 +34,12 @@ pub trait Worker {
   /// URL to the CorTeX sink
   fn sink(&self) -> String;
   /// main worker loop, works in perpetuity or up to a specified `limit`
-  fn start(&self, limit : Option<usize>) -> Result<(), Error> {
+  fn start(&self, limit: Option<usize>) -> Result<(), Error> {
     let mut work_counter = 0;
     // Connect to a task ventilator
     let context_source = Context::new();
     let source = context_source.socket(zmq::DEALER).unwrap();
-    let identity : String = (0..10).map(|_| rand::random::<u8>() as char).collect();
+    let identity: String = (0..10).map(|_| rand::random::<u8>() as char).collect();
     source.set_identity(identity.as_bytes()).unwrap();
 
     assert!(source.connect(&self.source()).is_ok());
@@ -83,19 +82,18 @@ pub trait Worker {
           data.truncate(size);
           if size < message_size {
             // If exhausted, send the last frame
-            sink.send(&data,0).unwrap();
+            sink.send(&data, 0).unwrap();
             // And terminate
             break;
           } else {
             // If more to go, send the frame and indicate there's more to come
-            sink.send(&data,SNDMORE).unwrap();
+            sink.send(&data, SNDMORE).unwrap();
           }
         }
-      }
-      else {
+      } else {
         // If there was nothing to do, retry a minute later
-        thread::sleep(Duration::new(60,0));
-        continue
+        thread::sleep(Duration::new(60, 0));
+        continue;
       }
 
       work_counter += 1;
@@ -103,10 +101,10 @@ pub trait Worker {
         Some(upper_bound) => {
           if work_counter >= upper_bound {
             // Give enough time to complete the Final job.
-            thread::sleep(Duration::new(1,0));
+            thread::sleep(Duration::new(1, 0));
             break;
           }
-        },
+        }
         None => {}
       };
     }
@@ -116,15 +114,15 @@ pub trait Worker {
 /// An echo worker for testing
 pub struct EchoWorker {
   /// the usual
-  pub service : String,
+  pub service: String,
   /// the usual
-  pub version : f32,
+  pub version: f32,
   /// the usual
-  pub message_size : usize,
+  pub message_size: usize,
   /// the usual
-  pub source : String,
+  pub source: String,
   /// the usual
-  pub sink : String
+  pub sink: String,
 }
 impl Default for EchoWorker {
   fn default() -> EchoWorker {
@@ -133,32 +131,40 @@ impl Default for EchoWorker {
       version: 0.1,
       message_size: 100000,
       source: "tcp://localhost:5555".to_string(),
-      sink: "tcp://localhost:5556".to_string()
+      sink: "tcp://localhost:5556".to_string(),
     }
   }
 }
 impl Worker for EchoWorker {
-  fn service(&self) -> String {self.service.clone()}
-  fn source(&self) -> String {self.source.clone()}
-  fn sink(&self) -> String {self.sink.clone()}
-  fn message_size(&self) -> usize {self.message_size.clone()}
+  fn service(&self) -> String {
+    self.service.clone()
+  }
+  fn source(&self) -> String {
+    self.source.clone()
+  }
+  fn sink(&self) -> String {
+    self.sink.clone()
+  }
+  fn message_size(&self) -> usize {
+    self.message_size.clone()
+  }
 
-  fn convert(&self, path : &Path) -> Option<File> {
+  fn convert(&self, path: &Path) -> Option<File> {
     Some(File::open(path).unwrap())
   }
 }
 /// A TeX to HTML conversion worker
 pub struct TexToHtmlWorker {
   /// the usual
-  pub service : String,
+  pub service: String,
   /// the usual
-  pub version : f32,
+  pub version: f32,
   /// the usual
-  pub message_size : usize,
+  pub message_size: usize,
   /// the usual
-  pub source : String,
+  pub source: String,
   /// the usual
-  pub sink : String
+  pub sink: String,
 }
 impl Default for TexToHtmlWorker {
   fn default() -> TexToHtmlWorker {
@@ -167,19 +173,27 @@ impl Default for TexToHtmlWorker {
       version: 0.1,
       message_size: 100000,
       source: "tcp://localhost:5555".to_string(),
-      sink: "tcp://localhost:5556".to_string()
+      sink: "tcp://localhost:5556".to_string(),
     }
   }
 }
 impl Worker for TexToHtmlWorker {
-  fn service(&self) -> String {self.service.clone()}
-  fn source(&self) -> String {self.source.clone()}
-  fn sink(&self) -> String {self.sink.clone()}
-  fn message_size(&self) -> usize {self.message_size.clone()}
+  fn service(&self) -> String {
+    self.service.clone()
+  }
+  fn source(&self) -> String {
+    self.source.clone()
+  }
+  fn sink(&self) -> String {
+    self.sink.clone()
+  }
+  fn message_size(&self) -> usize {
+    self.message_size.clone()
+  }
 
-  fn convert(&self, path : &Path) -> Option<File> {
+  fn convert(&self, path: &Path) -> Option<File> {
     let name = path.file_stem().unwrap().to_str().unwrap();
-    let destination_path = env::temp_dir().to_str().unwrap().to_string() + "/" +name+ ".zip";
+    let destination_path = env::temp_dir().to_str().unwrap().to_string() + "/" + name + ".zip";
     // println!("Source {:?}", path);
     Command::new("latexmlc")
       .arg("--whatsin")
@@ -204,13 +218,13 @@ impl Worker for TexToHtmlWorker {
       .arg(destination_path.clone())
       .arg(path.clone())
       .output()
-      .unwrap_or_else(|e| { panic!("failed to execute process: {}", e) });
+      .unwrap_or_else(|e| panic!("failed to execute process: {}", e));
 
     // println!("Dest: {:?}", destination_path);
     let file_test = File::open(destination_path.clone());
     match file_test {
       Ok(file) => Some(file),
-      Err(_) => None
+      Err(_) => None,
     }
   }
 }
