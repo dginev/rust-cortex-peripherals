@@ -62,7 +62,13 @@ pub trait Worker {
       loop {
         source.recv(&mut recv_msg, 0).unwrap();
 
-        file.write(recv_msg.deref()).unwrap();
+        if let Ok(uwritten) = file.write(recv_msg.deref()) {
+          if uwritten <= 0 {
+            break;
+          }
+        } else {
+          break;
+        }
         if !source.get_rcvmore().unwrap() {
           break;
         }
@@ -97,16 +103,13 @@ pub trait Worker {
       }
 
       work_counter += 1;
-      match limit {
-        Some(upper_bound) => {
-          if work_counter >= upper_bound {
-            // Give enough time to complete the Final job.
-            thread::sleep(Duration::new(1, 0));
-            break;
-          }
+      if let Some(upper_bound) = limit {
+        if work_counter >= upper_bound {
+          // Give enough time to complete the Final job.
+          thread::sleep(Duration::new(1, 0));
+          break;
         }
-        None => {}
-      };
+      }
     }
     Ok(())
   }
@@ -129,7 +132,7 @@ impl Default for EchoWorker {
     EchoWorker {
       service: "echo_service".to_string(),
       version: 0.1,
-      message_size: 100000,
+      message_size: 100_000,
       source: "tcp://localhost:5555".to_string(),
       sink: "tcp://localhost:5556".to_string(),
     }
@@ -146,7 +149,7 @@ impl Worker for EchoWorker {
     self.sink.clone()
   }
   fn message_size(&self) -> usize {
-    self.message_size.clone()
+    self.message_size
   }
 
   fn convert(&self, path: &Path) -> Option<File> {
@@ -171,7 +174,7 @@ impl Default for TexToHtmlWorker {
     TexToHtmlWorker {
       service: "tex_to_html".to_string(),
       version: 0.1,
-      message_size: 100000,
+      message_size: 100_000,
       source: "tcp://localhost:5555".to_string(),
       sink: "tcp://localhost:5556".to_string(),
     }
@@ -188,7 +191,7 @@ impl Worker for TexToHtmlWorker {
     self.sink.clone()
   }
   fn message_size(&self) -> usize {
-    self.message_size.clone()
+    self.message_size
   }
 
   fn convert(&self, path: &Path) -> Option<File> {
@@ -216,7 +219,7 @@ impl Worker for TexToHtmlWorker {
       .arg("cortex.log")
       .arg("--destination")
       .arg(destination_path.clone())
-      .arg(path.clone())
+      .arg(path.to_string_lossy().to_string())
       .output()
       .unwrap_or_else(|e| panic!("failed to execute process: {}", e));
 
