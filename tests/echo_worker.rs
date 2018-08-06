@@ -1,8 +1,8 @@
 extern crate pericortex;
 extern crate zmq;
-use std::thread;
-use zmq::{SNDMORE};
 use pericortex::worker::{EchoWorker, Worker};
+use std::thread;
+use zmq::SNDMORE;
 
 #[test]
 fn mock_round_trip() {
@@ -12,7 +12,7 @@ fn mock_round_trip() {
   let vent_thread = thread::spawn(move || {
     let ventilator_context = zmq::Context::new();
     let ventilator = ventilator_context.socket(zmq::ROUTER).unwrap();
-    let ventilator_address = "tcp://*:5555";
+    let ventilator_address = "tcp://127.0.0.1:51695";
     assert!(ventilator.bind(&ventilator_address).is_ok());
 
     // We expect one request
@@ -31,7 +31,7 @@ fn mock_round_trip() {
   let sink_thread = thread::spawn(move || {
     let sink_context = zmq::Context::new();
     let sink = sink_context.socket(zmq::PULL).unwrap();
-    let sink_address = "tcp://*:5556";
+    let sink_address = "tcp://127.0.0.1:51696";
     assert!(sink.bind(&sink_address).is_ok());
 
     let mut service_msg = zmq::Message::new().unwrap();

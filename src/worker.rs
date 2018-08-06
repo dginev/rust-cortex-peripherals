@@ -133,8 +133,8 @@ impl Default for EchoWorker {
       service: "echo_service".to_string(),
       version: 0.1,
       message_size: 100_000,
-      source: "tcp://localhost:5555".to_string(),
-      sink: "tcp://localhost:5556".to_string(),
+      source: "tcp://127.0.0.1:51695".to_string(),
+      sink: "tcp://127.0.0.1:51696".to_string(),
     }
   }
 }
@@ -175,8 +175,8 @@ impl Default for TexToHtmlWorker {
       service: "tex_to_html".to_string(),
       version: 0.1,
       message_size: 100_000,
-      source: "tcp://localhost:5555".to_string(),
-      sink: "tcp://localhost:5556".to_string(),
+      source: "tcp://127.0.0.1:51695".to_string(),
+      sink: "tcp://127.0.0.1:51696".to_string(),
     }
   }
 }
