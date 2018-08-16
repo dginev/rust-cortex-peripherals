@@ -34,6 +34,10 @@ fn mock_round_trip() {
     let sink_address = "tcp://127.0.0.1:51696";
     assert!(sink.bind(&sink_address).is_ok());
 
+    let mut id_msg = zmq::Message::new().unwrap();
+    sink.recv(&mut id_msg, 0).unwrap();
+    let _identity = id_msg.as_str().unwrap();
+
     let mut service_msg = zmq::Message::new().unwrap();
     sink.recv(&mut service_msg, 0).unwrap();
     let service_name = service_msg.as_str().unwrap();

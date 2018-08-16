@@ -78,6 +78,7 @@ pub trait Worker {
       let file_opt = self.convert(Path::new(&input_filepath));
       if file_opt.is_some() {
         let mut converted_file = file_opt.unwrap();
+        sink.send_str(&identity, SNDMORE).unwrap();
         sink.send_str(&self.service(), SNDMORE).unwrap();
         sink.send_str(taskid, SNDMORE).unwrap();
         loop {
