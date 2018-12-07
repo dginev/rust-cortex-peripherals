@@ -25,7 +25,7 @@ use std::process::Command;
 /// Generic requirements for CorTeX workers
 pub trait Worker {
   /// Core processing method
-  fn convert(&self, &Path) -> Option<File>;
+  fn convert(&self, _: &Path) -> Option<File>;
   /// Size of chunk for network communication, larger implies less IO, smaller implies less RAM use
   fn message_size(&self) -> usize;
   /// Name of the service, as registered in CorTeX
