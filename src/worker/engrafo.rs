@@ -8,6 +8,7 @@
 
 //! base class automating dispatcher communication via ZMQ
 
+use std::env;
 use std::fs::File;
 use std::io::{Error, Write};
 use std::path::Path;
@@ -73,17 +74,20 @@ impl EngrafoWorker {
     let unpacked_dir_path = input_tmpdir.path().to_str().unwrap().to_string() + "/";
     let destination_tmpdir = TempDir::new("engrafo_output").unwrap();
     let destination_dir_path = destination_tmpdir.path().to_str().unwrap();
+    let tmp_dir_str = env::temp_dir().as_path().display().to_string();
+    let docker_input_path = unpacked_dir_path.replace(&tmp_dir_str, "/workdir");
+    let docker_output_path = destination_dir_path.replace(&tmp_dir_str, "/workdir");
 
     let cmd_result = Command::new("docker")
       .arg("run")
       .arg("-v")
-      .arg("/tmp:/tmp")
+      .arg(format!("{}:/workdir", tmp_dir_str))
       .arg("-w")
-      .arg("/tmp")
+      .arg("/workdir")
       .arg("arxivvanity/engrafo:2.0.0")
       .arg("engrafo")
-      .arg(unpacked_dir_path)
-      .arg(destination_dir_path)
+      .arg(dbg!(docker_input_path))
+      .arg(dbg!(docker_output_path))
       .output()
       .expect("failed to execute process engrafo docker process.");
 
