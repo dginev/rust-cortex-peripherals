@@ -1,15 +1,10 @@
-CorTeX Peripherals - Rust+ZMQ implementation
+# CorTeX Peripherals - Rust+ZMQ implementation
 
-## Rust installation for HULK (and other non-sudo clusters)
+Worker implementations and utilities for CorTeX, in Rust.
 
-1. Find a way to get rustup.sh to HULK without https capabilities. Traditionally it is:
-  ```
-  curl -s https://static.rust-lang.org/rustup.sh
-  ```
+### Workers
 
-2. Then perform the installation process, and add the local paths to 
-  ```
-  tcsh% mkdir ~/.local
-  tcsh% ./rustup.sh --channel=nightly --prefix=/home/dginev/.local --disable-sudo
-
-  ```
+1. [Engrafo](https://github.com/arxiv-vanity/engrafo) - tex-to-html conversion via latexml, with advanced styling and UX
+  - uses a dedicated `docker` image which is an installation prerequisite.
+  - builds under the `engrafo` feature flag, via `cargo test --features=engrafo`
+  - starting a worker: `cargo run --release --features=engrafo --bin engrafo_worker`

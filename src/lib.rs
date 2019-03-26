@@ -14,8 +14,5 @@
 )]
 #![deny(missing_docs)]
 
-extern crate Archive;
-extern crate rand;
-extern crate zmq;
-
+pub mod adaptor;
 pub mod worker;

@@ -7,10 +7,8 @@
 
 //! base class automating dispatcher communication via ZMQ
 
-extern crate rand;
-extern crate zmq;
-
-use rand::{thread_rng, Rng};
+use rand::seq::SliceRandom;
+use rand::thread_rng;
 use std::env;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};
@@ -42,8 +40,9 @@ pub trait Worker {
     let source = context_source.socket(zmq::DEALER).unwrap();
     let letters: Vec<_> = "abcdefghijklmonpqrstuvwxyz".chars().collect();
     let mut identity = String::new();
+    let mut rng = thread_rng();
     for _step in 1..20 {
-      identity.push(*thread_rng().choose(&letters).unwrap());
+      identity.push(*letters.choose(&mut rng).unwrap());
     }
     source.set_identity(identity.as_bytes()).unwrap();
 
@@ -54,10 +53,10 @@ pub trait Worker {
     assert!(sink.connect(&self.sink()).is_ok());
     // Work in perpetuity
     loop {
-      let mut taskid_msg = Message::new().unwrap();
-      let mut recv_msg = Message::new().unwrap();
+      let mut taskid_msg = Message::new();
+      let mut recv_msg = Message::new();
 
-      source.send_str(&self.service(), 0).unwrap();
+      source.send(&self.service(), 0).unwrap();
       source.recv(&mut taskid_msg, 0).unwrap();
       let taskid = taskid_msg.as_str().unwrap();
 
@@ -83,9 +82,9 @@ pub trait Worker {
       let file_opt = self.convert(Path::new(&input_filepath));
       if file_opt.is_some() {
         let mut converted_file = file_opt.unwrap();
-        sink.send_str(&identity, SNDMORE).unwrap();
-        sink.send_str(&self.service(), SNDMORE).unwrap();
-        sink.send_str(taskid, SNDMORE).unwrap();
+        sink.send(&identity, SNDMORE).unwrap();
+        sink.send(&self.service(), SNDMORE).unwrap();
+        sink.send(taskid, SNDMORE).unwrap();
         loop {
           // Stream converted data via zmq
           let message_size = self.message_size();
@@ -237,3 +236,8 @@ impl Worker for TexToHtmlWorker {
     }
   }
 }
+
+#[cfg(feature = "engrafo")]
+mod engrafo;
+#[cfg(feature = "engrafo")]
+pub use engrafo::EngrafoWorker;
