@@ -8,7 +8,7 @@
 
 //! base class automating dispatcher communication via ZMQ
 
-use std::fs::{rename, File};
+use std::fs::File;
 use std::io::{Error, Write};
 use std::path::Path;
 use std::process::Command;
@@ -69,7 +69,6 @@ impl Worker for EngrafoWorker {
 
 impl EngrafoWorker {
   fn convert_result(&self, path: &Path) -> Result<File, Error> {
-    let name = path.file_stem().unwrap().to_str().unwrap();
     let input_tmpdir = adaptor::extract_zip_to_tmpdir(path, "engrafo_input")?;
     let unpacked_dir_path = input_tmpdir.path().to_str().unwrap().to_string() + "/";
     let destination_tmpdir = TempDir::new("engrafo_output").unwrap();
@@ -99,10 +98,7 @@ impl EngrafoWorker {
       log_file.write_all(&cmd_result.stderr)?;
       log_file.write_all(&cmd_result.stdout)?;
     }
-    // if we wrote an index.html, rename to the proper name
-    let index_name = format!("{}/index.html", destination_dir_path);
-    let cortex_dest_name = format!("{}/{}.html", destination_dir_path, name);
-    rename(index_name, cortex_dest_name)?;
+
     // cleanup
     // By closing the `TempDir` explicitly, we can check that it has
     // been deleted successfully. If we don't close it explicitly,
