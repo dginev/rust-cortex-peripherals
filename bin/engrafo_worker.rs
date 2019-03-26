@@ -1,3 +1,4 @@
+#![cfg(feature = "engrafo")]
 use pericortex::worker::{EngrafoWorker, Worker};
 
 fn main() {
