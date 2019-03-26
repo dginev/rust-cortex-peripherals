@@ -103,6 +103,9 @@ pub trait Worker {
         }
       } else {
         // If there was nothing to do, retry a minute later
+        // throttle in case there is a temporary local issue, such as running out of available RAM, etc.
+        // but also to protect the server from DDoS-like behavior where we send broken requests at nauseam.
+        println!("-- Nothing to return, possible problems? Throttling for a minute.");
         thread::sleep(Duration::new(60, 0));
         continue;
       }

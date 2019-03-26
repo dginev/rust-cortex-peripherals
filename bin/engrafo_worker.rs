@@ -1,10 +1,8 @@
 #![cfg(feature = "engrafo")]
 use pericortex::worker::{EngrafoWorker, Worker};
 
+/// Start working on an Engrafo task for a given CorTeX endpoint
 fn main() {
-  // Let's get a minimal ZMQ ventilator/sink pair to test the worker
-  // Start up an echo worker
   let worker = EngrafoWorker::default();
-  // Perform a single echo task
   worker.start(None).expect("Worker started successfully.");
 }
