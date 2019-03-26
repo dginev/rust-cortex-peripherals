@@ -19,6 +19,7 @@ use super::Worker;
 use crate::adaptor;
 
 /// An echo worker for testing
+#[derive(Clone, Debug)]
 pub struct EngrafoWorker {
   /// the usual
   pub service: String,
@@ -30,6 +31,12 @@ pub struct EngrafoWorker {
   pub source: String,
   /// the usual
   pub sink: String,
+  /// port to the source address
+  pub source_port: usize,
+  /// port to the sink address
+  pub sink_port: usize,
+  /// Allow for multiple parallel workers
+  pub pool_size: usize,
 }
 impl Default for EngrafoWorker {
   fn default() -> EngrafoWorker {
@@ -37,8 +44,11 @@ impl Default for EngrafoWorker {
       service: "engrafo".to_string(),
       version: 2.0,
       message_size: 100_000,
-      source: "tcp://127.0.0.1:51695".to_string(),
-      sink: "tcp://127.0.0.1:51696".to_string(),
+      source: "127.0.0.1".to_string(),
+      source_port: 51695,
+      sink: "127.0.0.1".to_string(),
+      sink_port: 51696,
+      pool_size: 1,
     }
   }
 }
@@ -48,13 +58,16 @@ impl Worker for EngrafoWorker {
     self.service.clone()
   }
   fn source(&self) -> String {
-    self.source.clone()
+    format!("tcp://{}:{}", self.source, self.source_port)
   }
   fn sink(&self) -> String {
-    self.sink.clone()
+    format!("tcp://{}:{}", self.sink, self.sink_port)
   }
   fn message_size(&self) -> usize {
     self.message_size
+  }
+  fn pool_size(&self) -> usize {
+    self.pool_size
   }
 
   fn convert(&self, path: &Path) -> Option<File> {
@@ -86,8 +99,8 @@ impl EngrafoWorker {
       .arg("/workdir")
       .arg("arxivvanity/engrafo:2.0.0")
       .arg("engrafo")
-      .arg(dbg!(docker_input_path))
-      .arg(dbg!(docker_output_path))
+      .arg(docker_input_path)
+      .arg(docker_output_path)
       .output()
       .expect("failed to execute process engrafo docker process.");
 
