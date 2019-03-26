@@ -7,21 +7,20 @@
 
 //! base class automating dispatcher communication via ZMQ
 
-use rand::seq::SliceRandom;
-use rand::thread_rng;
 use std::env;
+use std::error::Error;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::ops::Deref;
 use std::path::Path;
 use std::thread;
 use std::time::Duration;
-use zmq::{Context, Error, Message, SNDMORE};
+use zmq::{Context, Message, SNDMORE};
 // use std::str;
 use std::process::Command;
 
 /// Generic requirements for CorTeX workers
-pub trait Worker {
+pub trait Worker: Clone + Send {
   /// Core processing method
   fn convert(&self, _: &Path) -> Option<File>;
   /// Size of chunk for network communication, larger implies less IO, smaller implies less RAM use
@@ -32,18 +31,46 @@ pub trait Worker {
   fn source(&self) -> String;
   /// URL to the CorTeX sink
   fn sink(&self) -> String;
-  /// main worker loop, works in perpetuity or up to a specified `limit`
-  fn start(&self, limit: Option<usize>) -> Result<(), Error> {
+  /// Simultaneous threads used for one worker each
+  fn pool_size(&self) -> usize {
+    1
+  }
+  /// sets up the worker process, with as many threads as requested
+  fn start(&self, limit: Option<usize>) -> Result<(), Box<Error>>
+  where
+    Self: 'static + Sized,
+  {
+    let hostname = hostname::get_hostname().unwrap_or_else(|| String::from("hostname"));
+    match self.pool_size() {
+      1 => self.start_single(format!("{}:engrafo:1", hostname), limit),
+      n => {
+        let mut threads = Vec::new();
+        for thread in 0..n {
+          let thread_str = if thread < 10 {
+            format!("0{}", thread)
+          } else {
+            thread.to_string()
+          };
+          let identity_single = format!("{}:engrafo:{}", hostname, thread_str);
+          let thread_self: Self = self.clone();
+          threads.push(thread::spawn(move || {
+            // TODO: Errors can not be shared between threads safely? What should be the robustness strategy here?
+            thread_self.start_single(identity_single, limit).unwrap();
+          }));
+        }
+        for t in threads {
+          t.join().unwrap();
+        }
+        Ok(())
+      }
+    }
+  }
+  /// main worker loop for a single thread, works in perpetuity or up to a specified `limit`
+  fn start_single(&self, identity: String, limit: Option<usize>) -> Result<(), Box<Error>> {
     let mut work_counter = 0;
     // Connect to a task ventilator
     let context_source = Context::new();
     let source = context_source.socket(zmq::DEALER).unwrap();
-    let letters: Vec<_> = "abcdefghijklmonpqrstuvwxyz".chars().collect();
-    let mut identity = String::new();
-    let mut rng = thread_rng();
-    for _step in 1..20 {
-      identity.push(*letters.choose(&mut rng).unwrap());
-    }
     source.set_identity(identity.as_bytes()).unwrap();
 
     assert!(source.connect(&self.source()).is_ok());
@@ -123,6 +150,7 @@ pub trait Worker {
   }
 }
 /// An echo worker for testing
+#[derive(Clone, Debug)]
 pub struct EchoWorker {
   /// the usual
   pub service: String,
@@ -165,6 +193,7 @@ impl Worker for EchoWorker {
   }
 }
 /// A TeX to HTML conversion worker
+#[derive(Clone, Debug)]
 pub struct TexToHtmlWorker {
   /// the usual
   pub service: String,
