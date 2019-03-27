@@ -53,7 +53,7 @@ fn mock_round_trip() {
   });
 
   // Start up an echo worker
-  let worker = EchoWorker::default();
+  let mut worker = EchoWorker::default();
   // Perform a single echo task
   assert!(worker.start(Some(1)).is_ok());
 

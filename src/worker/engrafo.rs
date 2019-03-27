@@ -6,13 +6,15 @@
 // This file may not be copied, modified, or distributed
 // except according to those terms.
 
-//! base class automating dispatcher communication via ZMQ
+//! a CorTeX worker for Engrafo, via a docker image
 
+use std::borrow::Cow;
 use std::env;
 use std::fs::File;
-use std::io::{Error, Write};
+use std::io::{Write};
 use std::path::Path;
 use std::process::Command;
+use std::error::Error;
 use tempdir::TempDir;
 
 use super::Worker;
@@ -37,6 +39,8 @@ pub struct EngrafoWorker {
   pub sink_port: usize,
   /// Allow for multiple parallel workers
   pub pool_size: usize,
+  /// A uniquely identifying string, usually `hostname:engrafo:threadid`
+  pub identity: String,
 }
 impl Default for EngrafoWorker {
   fn default() -> EngrafoWorker {
@@ -49,19 +53,20 @@ impl Default for EngrafoWorker {
       sink: "127.0.0.1".to_string(),
       sink_port: 51696,
       pool_size: 1,
+      identity: "unknown:engrafo:1".to_string(),
     }
   }
 }
 
 impl Worker for EngrafoWorker {
-  fn service(&self) -> String {
-    self.service.clone()
+  fn get_service(&self) -> &str {
+    &self.service
   }
-  fn source(&self) -> String {
-    format!("tcp://{}:{}", self.source, self.source_port)
+  fn get_source_address(&self) -> Cow<str> {
+    Cow::Owned(format!("tcp://{}:{}", self.source, self.source_port))
   }
-  fn sink(&self) -> String {
-    format!("tcp://{}:{}", self.sink, self.sink_port)
+  fn get_sink_address(&self) -> Cow<str> {
+    Cow::Owned(format!("tcp://{}:{}", self.sink, self.sink_port))
   }
   fn message_size(&self) -> usize {
     self.message_size
@@ -69,20 +74,14 @@ impl Worker for EngrafoWorker {
   fn pool_size(&self) -> usize {
     self.pool_size
   }
-
-  fn convert(&self, path: &Path) -> Option<File> {
-    match self.convert_result(path) {
-      Ok(file) => Some(file),
-      Err(e) => {
-        println!("Error encountered while converting: {:?}", e);
-        None
-      }
-    }
+  fn set_identity(&mut self, identity: String) {
+    self.identity = identity;
   }
-}
+  fn get_identity(&self) -> &str {
+    &self.identity
+  }
 
-impl EngrafoWorker {
-  fn convert_result(&self, path: &Path) -> Result<File, Error> {
+  fn convert(&self, path: &Path) -> Result<File, Box<Error>> {
     let input_tmpdir = adaptor::extract_zip_to_tmpdir(path, "engrafo_input")?;
     let unpacked_dir_path = input_tmpdir.path().to_str().unwrap().to_string() + "/";
     let destination_tmpdir = TempDir::new("engrafo_output").unwrap();
@@ -93,6 +92,8 @@ impl EngrafoWorker {
 
     let cmd_result = Command::new("docker")
       .arg("run")
+      .arg("-m")
+      .arg("4g") // can be made customizeable based on architecture
       .arg("-v")
       .arg(format!("{}:/workdir", tmp_dir_str))
       .arg("-w")
@@ -124,6 +125,6 @@ impl EngrafoWorker {
     // succeeded.
     input_tmpdir.close().unwrap();
 
-    adaptor::archive_tmpdir_to_zip(destination_tmpdir)
+    adaptor::archive_tmpdir_to_zip(destination_tmpdir).map_err(Into::into)
   }
 }

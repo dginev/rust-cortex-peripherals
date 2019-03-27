@@ -14,5 +14,8 @@
 )]
 #![deny(missing_docs)]
 
+#[macro_use]
+extern crate log;
+
 pub mod adaptor;
 pub mod worker;

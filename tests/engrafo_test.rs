@@ -10,7 +10,7 @@ fn unit_engrafo_test() {
   // test we can convert a test doc
   let test_input_path = Path::new("tests/resources/1508.01222.zip");
   let converted = worker.convert(&test_input_path);
-  assert!(converted.is_some());
+  assert!(converted.is_ok());
   let mut zip_file = converted.unwrap();
   let mut contents = vec![];
   assert!(zip_file.read_to_end(&mut contents).is_ok());
