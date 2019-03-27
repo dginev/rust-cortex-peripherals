@@ -8,7 +8,6 @@
 //! base class automating dispatcher communication via ZMQ
 
 use std::borrow::Cow;
-use std::env;
 use std::error::Error;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};
@@ -16,6 +15,8 @@ use std::ops::Deref;
 use std::path::Path;
 use std::thread;
 use std::time::Duration;
+
+use tempdir::TempDir;
 use zmq::{Context, Message, Socket, SNDMORE};
 
 /// Generic requirements for CorTeX workers
@@ -92,37 +93,19 @@ pub trait Worker: Clone + Send {
     assert!(sink.connect(&self.get_sink_address()).is_ok());
     // Work in perpetuity
     loop {
-      let mut taskid_msg = Message::new();
-      let mut recv_msg = Message::new();
-
-      source.send(&self.get_service(), 0).unwrap();
-      source.recv(&mut taskid_msg, 0).unwrap();
-      let taskid = taskid_msg.as_str().unwrap();
-
       // Prepare a File for the input
-      let input_filepath = env::temp_dir().to_str().unwrap().to_string() + "/" + taskid + ".zip";
-      let mut file = File::create(input_filepath.clone()).unwrap();
-      let mut input_size = 0;
-      loop {
-        source.recv(&mut recv_msg, 0).unwrap();
-
-        if let Ok(written) = file.write(recv_msg.deref()) {
-          input_size += written;
-        }
-        if !source.get_rcvmore().unwrap() {
-          break;
-        }
-      }
-
-      let file_result = if input_size > 0 {
-        file.seek(SeekFrom::Start(0)).unwrap();
+      let input_tmpdir = TempDir::new("cortex_task").unwrap();
+      let (file_result, input_filepath, input_size, taskid) =
+        self.receive_from_cortex(&input_tmpdir, &source);
+      let converted_result = if file_result.is_ok() {
         self.convert(Path::new(&input_filepath))
       } else {
-        Err(From::from("Input was empty.")) // No input, no conversion needed
+        file_result
       };
 
-      self.respond_to_cortex(file_result, input_size, taskid, &sink);
+      self.respond_to_cortex(converted_result, input_size, &taskid, &sink);
 
+      input_tmpdir.close().unwrap();
       work_counter += 1;
       if let Some(upper_bound) = limit {
         if work_counter >= upper_bound {
@@ -135,6 +118,47 @@ pub trait Worker: Clone + Send {
     Ok(())
   }
 
+  /// Receive from the source endpoint
+  fn receive_from_cortex(
+    &self,
+    input_tmpdir: &TempDir,
+    source: &Socket,
+  ) -> (Result<File, Box<Error>>, String, usize, String) {
+    let mut taskid_msg = Message::new();
+    let mut recv_msg = Message::new();
+    source.send(&self.get_service(), 0).unwrap();
+    source.recv(&mut taskid_msg, 0).unwrap();
+    let taskid = taskid_msg.as_str().unwrap();
+
+    let input_filepath = input_tmpdir.path().to_str().unwrap().to_string() + "/" + taskid + ".zip";
+
+    let mut file = File::create(input_filepath.clone()).unwrap();
+    let mut input_size = 0;
+    loop {
+      source.recv(&mut recv_msg, 0).unwrap();
+
+      if let Ok(written) = file.write(recv_msg.deref()) {
+        input_size += written;
+      }
+      if !source.get_rcvmore().unwrap() {
+        break;
+      }
+    }
+
+    let file_result = if input_size > 0 {
+      file.seek(SeekFrom::Start(0)).unwrap();
+      Ok(file)
+    } else {
+      Err(From::from("Input was empty.")) // No input, no conversion needed
+    };
+
+    info!(
+      target: &format!("{}:received", self.get_identity()),
+      "task {}, read {} bytes from CorTeX.", taskid, input_size
+    );
+    (file_result, input_filepath, input_size, taskid.to_string())
+  }
+
   /// Respond to the sink endpoint
   fn respond_to_cortex(
     &self,
@@ -143,47 +167,53 @@ pub trait Worker: Clone + Send {
     taskid: &str,
     sink: &Socket,
   ) {
+    sink.send(self.get_identity(), SNDMORE).unwrap();
+    sink.send(self.get_service(), SNDMORE).unwrap();
+    sink.send(taskid, SNDMORE).unwrap();
     match file_result {
-    Ok(mut converted_file) => {
-      sink.send(self.get_identity(), SNDMORE).unwrap();
-      sink.send(self.get_service(), SNDMORE).unwrap();
-      sink.send(taskid, SNDMORE).unwrap();
-      loop {
-        // Stream converted data via zmq
-        let message_size = self.message_size();
-        let mut data = vec![0; message_size];
-        let size = converted_file.read(&mut data).unwrap();
-        data.truncate(size);
-        if size < message_size {
-          // If exhausted, send the last frame
-          sink.send(&data, 0).unwrap();
-          // And terminate
-          break;
-        } else {
-          // If more to go, send the frame and indicate there's more to come
-          sink.send(&data, SNDMORE).unwrap();
+      Ok(mut converted_file) => {
+        let mut total_size = 0;
+        loop {
+          // Stream converted data via zmq
+          let message_size = self.message_size();
+          let mut data = vec![0; message_size];
+          let size = converted_file.read(&mut data).unwrap();
+          total_size += size;
+          data.truncate(size);
+          if size < message_size {
+            // If exhausted, send the last frame
+            sink.send(&data, 0).unwrap();
+            // And terminate
+            break;
+          } else {
+            // If more to go, send the frame and indicate there's more to come
+            sink.send(&data, SNDMORE).unwrap();
+          }
         }
-      }
-    },
-    Err(e) => {
-      // If there was nothing to do, retry a minute later
-      // throttle in case there is a temporary local issue, such as running out of available RAM, etc.
-      // but also to protect the server from DDoS-like behavior where we send broken requests at nauseam.
-      if input_size == 0 {
         info!(
-          target: &format!("Result:{}", self.get_identity()),
-          "Nothing to return, empty input. Throttling for a minute."
+          target: &format!("{}:completed", self.get_identity()),
+          " task {}, sent {} bytes back to CorTeX.", taskid, total_size
         );
-      } else {
-        info!(
-          target: &format!("Result:{}", self.get_identity()),
-          "Nothing to return, conversion came back empty: {:?}. Throttling for a minute.", e
-        );
-        // Also, send an empty reply, so that cortex knows this is an aberrant task
-        // ....
       }
-      thread::sleep(Duration::new(60, 0));
-    }
+      Err(e) => {
+        // Send an empty reply, so that cortex knows this is an aberrant task
+        sink.send(&Vec::new(), 0).unwrap();
+        // If there was nothing to do
+        // throttle in case there is a temporary local issue, such as running out of available RAM, etc.
+        // but also to protect the server from DDoS-like behavior where we send broken requests at nauseam.
+        if input_size == 0 {
+          info!(
+            target: &format!("{}:result", self.get_identity()),
+            "Empty input. Throttling for a minute."
+          );
+        } else {
+          info!(
+            target: &format!("{}:result", self.get_identity()),
+            "Conversion came back empty: {:?}. Throttling for a minute.", e
+          );
+        }
+        thread::sleep(Duration::new(60, 0));
+      }
     }
   }
 }

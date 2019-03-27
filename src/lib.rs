@@ -18,4 +18,5 @@
 extern crate log;
 
 pub mod adaptor;
+pub mod logger;
 pub mod worker;
