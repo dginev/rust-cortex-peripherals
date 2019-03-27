@@ -57,7 +57,7 @@ pub trait Worker: Clone + Send {
       }
       n => {
         let mut threads = Vec::new();
-        for thread in 0..n {
+        for thread in 1..=n {
           let thread_str = if thread < 10 {
             format!("0{}", thread)
           } else {
