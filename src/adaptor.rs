@@ -47,7 +47,6 @@ pub fn extract_zip_to_tmpdir(path: &Path, tmpdir_prefix: &str) -> Result<TempDir
 /// Adaptor that turns an output temporary directory (assuming the filnema conventions are _already_ ollowed)
 /// into a ZIP file transmittable back to Cortex
 pub fn archive_tmpdir_to_zip(tmpdir: TempDir) -> Result<File, Error> {
-  // println!("Dest: {:?}", destination_path);
   let dir_path = tmpdir.path().to_str().unwrap();
   archive_directory(dir_path)
 }
@@ -92,12 +91,10 @@ where
       .unwrap();
 
     if path.is_file() {
-      // println!("adding {:?} as {:?} ...", path, name);
       zip.start_file(name, options)?;
       let mut f = File::open(path)?;
 
       f.read_to_end(&mut buffer)?;
-      // println!("buffer len: {:?}", buffer.len());
       zip.write_all(&*buffer)?;
       buffer.clear();
     }

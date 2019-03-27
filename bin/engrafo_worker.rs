@@ -42,6 +42,7 @@ fn main() -> Result<(), Box<Error>> {
     sink: address,
     source_port,
     sink_port,
-    pool_size
+    pool_size,
+    .. EngrafoWorker::default()
   }.start(None)
 }
