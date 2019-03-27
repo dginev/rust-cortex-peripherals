@@ -61,7 +61,7 @@ impl log::Log for RtxLogger {
       //   }
       // };
 
-      let message = format!("{} ", category_object);
+      let message = format!("{}\t", category_object);
 
       let painted_message = match record.level() {
         Level::Info => Green.paint(message),
