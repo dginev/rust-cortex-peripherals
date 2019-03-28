@@ -1,10 +1,10 @@
-use std::env;
-use std::borrow::Cow;
-use std::path::Path;
-use std::fs::File;
-use std::process::Command;
-use std::error::Error;
 use super::Worker;
+use std::borrow::Cow;
+use std::env;
+use std::error::Error;
+use std::fs::File;
+use std::path::Path;
+use std::process::Command;
 
 /// A TeX to HTML conversion worker -- this is a demonstration only
 /// it lacks robustness guards
@@ -22,6 +22,8 @@ pub struct TexToHtmlWorker {
   pub source: String,
   /// the usual
   pub sink: String,
+  ///  the usual
+  pub identity: String,
 }
 impl Default for TexToHtmlWorker {
   fn default() -> TexToHtmlWorker {
@@ -31,6 +33,7 @@ impl Default for TexToHtmlWorker {
       message_size: 100_000,
       source: "tcp://127.0.0.1:51695".to_string(),
       sink: "tcp://127.0.0.1:51696".to_string(),
+      identity: String::new()
     }
   }
 }
@@ -47,6 +50,8 @@ impl Worker for TexToHtmlWorker {
   fn message_size(&self) -> usize {
     self.message_size
   }
+  fn get_identity(&self) -> &str { &self.identity }
+  fn set_identity(&mut self, identity: String) { self.identity = identity; }
 
   fn convert(&self, path: &Path) -> Result<File, Box<Error>> {
     let name = path.file_stem().unwrap().to_str().unwrap();
