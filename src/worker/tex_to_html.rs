@@ -53,7 +53,7 @@ impl Worker for TexToHtmlWorker {
   fn get_identity(&self) -> &str { &self.identity }
   fn set_identity(&mut self, identity: String) { self.identity = identity; }
 
-  fn convert(&self, path: &Path) -> Result<File, Box<Error>> {
+  fn convert(&self, path: &Path) -> Result<File, Box<dyn Error>> {
     let name = path.file_stem().unwrap().to_str().unwrap();
     let destination_path = env::temp_dir().to_str().unwrap().to_string() + "/" + name + ".zip";
     // println!("Source {:?}", path);

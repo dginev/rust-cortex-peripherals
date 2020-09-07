@@ -15,6 +15,7 @@ use std::ops::Deref;
 use std::path::Path;
 use std::thread;
 use std::time::Duration;
+use std::ffi::OsString;
 
 use tempdir::TempDir;
 use zmq::{Context, Message, Socket, SNDMORE};
@@ -22,7 +23,7 @@ use zmq::{Context, Message, Socket, SNDMORE};
 /// Generic requirements for CorTeX workers
 pub trait Worker: Clone + Send {
   /// Core processing method
-  fn convert(&self, _: &Path) -> Result<File, Box<Error>>;
+  fn convert(&self, _: &Path) -> Result<File, Box<dyn Error>>;
   /// Size of chunk for network communication, larger implies less IO, smaller implies less RAM use
   fn message_size(&self) -> usize;
   /// Name of the service, as registered in CorTeX
@@ -45,11 +46,11 @@ pub trait Worker: Clone + Send {
   }
 
   /// sets up the worker process, with as many threads as requested
-  fn start(&mut self, limit: Option<usize>) -> Result<(), Box<Error>>
+  fn start(&mut self, limit: Option<usize>) -> Result<(), Box<dyn Error>>
   where
     Self: 'static + Sized,
   {
-    let hostname = hostname::get_hostname().unwrap_or_else(|| String::from("hostname"));
+    let hostname = hostname::get().unwrap_or_else(|_| OsString::from("hostname")).into_string().unwrap();
     match self.pool_size() {
       1 => {
         self.set_identity(format!("{}:engrafo:1", hostname));
@@ -79,7 +80,7 @@ pub trait Worker: Clone + Send {
     }
   }
   /// main worker loop for a single thread, works in perpetuity or up to a specified `limit`
-  fn start_single(&self, limit: Option<usize>) -> Result<(), Box<Error>> {
+  fn start_single(&self, limit: Option<usize>) -> Result<(), Box<dyn Error>> {
     let mut work_counter = 0;
     // Connect to a task ventilator
     let context_source = Context::new();
@@ -123,7 +124,7 @@ pub trait Worker: Clone + Send {
     &self,
     input_tmpdir: &TempDir,
     source: &Socket,
-  ) -> (Result<File, Box<Error>>, String, usize, String) {
+  ) -> (Result<File, Box<dyn Error>>, String, usize, String) {
     let mut taskid_msg = Message::new();
     let mut recv_msg = Message::new();
     source.send(&self.get_service(), 0).unwrap();
@@ -162,7 +163,7 @@ pub trait Worker: Clone + Send {
   /// Respond to the sink endpoint
   fn respond_to_cortex(
     &self,
-    file_result: Result<File, Box<Error>>,
+    file_result: Result<File, Box<dyn Error>>,
     input_size: usize,
     taskid: &str,
     sink: &Socket,

@@ -2,10 +2,11 @@
 use std::fs::{create_dir_all, File};
 use std::io::prelude::*;
 use std::io::SeekFrom;
-use std::io::{copy, Error};
+use std::io::{copy};
 use std::io::{Seek, Write};
 use std::iter::Iterator;
 use std::path::Path;
+use std::error::Error;
 
 use tempdir::TempDir;
 use tempfile::tempfile;
@@ -16,7 +17,7 @@ use zip::ZipArchive;
 
 /// Transform the ZIP provided by cortex into a TempDir,
 /// for e.g. tools such as Engrafo that aren't ZIP-capable
-pub fn extract_zip_to_tmpdir(path: &Path, tmpdir_prefix: &str) -> Result<TempDir, Error> {
+pub fn extract_zip_to_tmpdir(path: &Path, tmpdir_prefix: &str) -> Result<TempDir, Box<dyn Error>> {
   let input_tmpdir = TempDir::new(tmpdir_prefix)?;
   let unpacked_dir_path = input_tmpdir.path().to_str().unwrap().to_string() + "/";
 
@@ -46,14 +47,14 @@ pub fn extract_zip_to_tmpdir(path: &Path, tmpdir_prefix: &str) -> Result<TempDir
 
 /// Adaptor that turns an output temporary directory (assuming the filnema conventions are _already_ ollowed)
 /// into a ZIP file transmittable back to Cortex
-pub fn archive_tmpdir_to_zip(tmpdir: TempDir) -> Result<File, Error> {
+pub fn archive_tmpdir_to_zip(tmpdir: TempDir) -> Result<File, Box<dyn Error>> {
   let dir_path = tmpdir.path().to_str().unwrap();
   archive_directory(dir_path)
 }
 
 const METHOD_DEFLATED: zip::CompressionMethod = zip::CompressionMethod::Deflated;
 
-fn archive_directory(src_dir: &str) -> Result<File, Error> {
+fn archive_directory(src_dir: &str) -> Result<File, Box<dyn Error>> {
   let method = METHOD_DEFLATED;
 
   let mut file = tempfile()?;
@@ -68,7 +69,7 @@ fn archive_directory(src_dir: &str) -> Result<File, Error> {
 }
 
 fn zip_one_dir<T>(
-  it: &mut Iterator<Item = DirEntry>,
+  it: &mut dyn Iterator<Item = DirEntry>,
   prefix: &str,
   writer: &mut T,
   method: zip::CompressionMethod,

@@ -46,7 +46,7 @@ impl Worker for EchoWorker {
     self.message_size
   }
 
-  fn convert(&self, path: &Path) -> Result<File, Box<Error>> {
+  fn convert(&self, path: &Path) -> Result<File, Box<dyn Error>> {
     File::open(path).map_err(Into::into)
   }
   fn set_identity(&mut self, identity: String) {
