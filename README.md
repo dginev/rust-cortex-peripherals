@@ -3,7 +3,7 @@
 
 **Worker executables for [CorTeX](https://github.com/dginev/CorTeX) - a general processing framework for scientific documents**
 
-[![Build Status](https://secure.travis-ci.org/dginev/CorTeX-Peripherals.png?branch=master)](http://travis-ci.org/dginev/CorTeX-Peripherals) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/dginev/CorTeX-Peripherals/master/LICENSE) ![version](https://img.shields.io/badge/version-0.2.3-orange.svg)
+[![Build Status](https://github.com/dginev/CorTeX-Peripherals/actions?query=workflow%3ACI)](https://github.com/dginev/CorTeX-Peripherals/workflows/CI/badge.svg) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/dginev/CorTeX-Peripherals/master/LICENSE) ![version](https://img.shields.io/badge/version-0.2.3-orange.svg)
 
 
 
