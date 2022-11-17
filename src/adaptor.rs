@@ -22,20 +22,20 @@ pub fn extract_zip_to_tmpdir(path: &Path, tmpdir_prefix: &str) -> Result<TempDir
     let unpacked_dir_path = input_tmpdir.path().to_str().unwrap().to_string() + "/";
 
     // unpack the Zip file for engrafo
-    let inputzip = File::open(&path)?;
+    let inputzip = File::open(path)?;
     let mut input_archive = ZipArchive::new(inputzip)?;
     for i in 0..input_archive.len() {
         let mut file = input_archive.by_index(i)?;
         let extract_path = file.mangled_name();
         let extract_pathname = extract_path.as_path().display();
         let full_pathname = format!("{}{}", unpacked_dir_path, extract_pathname);
-        if (&*file.name()).ends_with('/') {
+        if (file.name()).ends_with('/') {
             create_dir_all(&full_pathname)?;
         } else {
             if let Some(p) = extract_path.parent() {
                 if !p.exists() {
                     let absolute_parent = format!("{}{}", unpacked_dir_path, p.display());
-                    create_dir_all(&absolute_parent)?;
+                    create_dir_all(absolute_parent)?;
                 }
             }
             let mut extracted_file = File::create(&full_pathname)?;
@@ -59,7 +59,7 @@ fn archive_directory(src_dir: &str) -> Result<File, Box<dyn Error>> {
 
     let mut file = tempfile()?;
 
-    let walkdir = WalkDir::new(src_dir.to_string());
+    let walkdir = WalkDir::new(src_dir);
     let it = walkdir.into_iter();
 
     zip_one_dir(&mut it.filter_map(Result::ok), src_dir, &mut file, method)?;
@@ -96,7 +96,7 @@ where
             let mut f = File::open(path)?;
 
             f.read_to_end(&mut buffer)?;
-            zip.write_all(&*buffer)?;
+            zip.write_all(&buffer)?;
             buffer.clear();
         }
     }

@@ -83,6 +83,6 @@ impl Worker for TexToHtmlWorker {
       .unwrap_or_else(|e| panic!("failed to execute process: {}", e));
 
     // println!("Dest: {:?}", destination_path);
-    File::open(destination_path.clone()).map_err(Into::into)
+    File::open(destination_path).map_err(Into::into)
   }
 }

@@ -127,7 +127,7 @@ pub trait Worker: Clone + Send {
   ) -> (Result<File, Box<dyn Error>>, String, usize, String) {
     let mut taskid_msg = Message::new();
     let mut recv_msg = Message::new();
-    source.send(&self.get_service(), 0).unwrap();
+    source.send(self.get_service(), 0).unwrap();
     source.recv(&mut taskid_msg, 0).unwrap();
     let taskid = taskid_msg.as_str().unwrap();
 
@@ -198,7 +198,7 @@ pub trait Worker: Clone + Send {
       }
       Err(e) => {
         // Send an empty reply, so that cortex knows this is an aberrant task
-        sink.send(&Vec::new(), 0).unwrap();
+        sink.send(Vec::new(), 0).unwrap();
         // If there was nothing to do
         // throttle in case there is a temporary local issue, such as running out of available RAM, etc.
         // but also to protect the server from DDoS-like behavior where we send broken requests at nauseam.
